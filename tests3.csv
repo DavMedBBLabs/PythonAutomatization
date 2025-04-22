@@ -1,0 +1,4 @@
+﻿Test ID;Summary;Description;Test Type;Repository Folder;Test Sets;Step;Data;Expected Result
+1;Prueba de login de usuario;Este test valida el flujo de login con credenciales válidas.;Manual;Public/Auth/User_Login;RTBQ-46;Abrir la página de login;;Se muestra el formulario de autenticación
+1;Prueba de login de usuario;Este test valida el flujo de login con credenciales válidas.;Manual;Public/Auth/User_Login;RTBQ-46;Introducir usuario y contraseña válidos;usuario: demo\ncontraseña: Demo1234;
+1;Prueba de login de usuario;Este test valida el flujo de login con credenciales válidas.;Manual;Public/Auth/User_Login;RTBQ-46;Pulsar el botón “Entrar”;;El usuario queda autenticado y redirigido al dashboard

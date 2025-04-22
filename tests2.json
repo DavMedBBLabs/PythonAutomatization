@@ -1,0 +1,64 @@
+[
+  {
+    "testtype": "Manual",
+    "fields": {
+      "project": {
+        "key": "RTBQ"
+      },
+      "summary": "Prueba Json Python LOGIN de usuario",
+      "description": "Este test valida el flujo de login con credenciales v�lidas."
+    },
+    "steps": [
+      {
+        "action": "Abrir la p�gina de login",
+        "data": "",
+        "result": "Se muestra el formulario de autenticaci�n"
+      },
+      {
+        "action": "Introducir usuario y contrase�a v�lidos",
+        "data": "usuario: demo\\ncontrase�a: Demo1234",
+        "result": ""
+      },
+      {
+        "action": "Pulsar el bot�n �Entrar�",
+        "data": "",
+        "result": "El usuario queda autenticado y redirigido al dashboard"
+      }
+    ],
+    "xray_test_repository_folder": "Public/Auth/PruebaDavidMedina21_04_2025",
+    "xray_test_sets": [
+      "PruebaJsonPython"
+    ]
+  },
+  {
+    "testtype": "Manual",
+    "fields": {
+      "project": {
+        "key": "RTBQ"
+      },
+      "summary": "Prueba Json Python REGISTRO de usuario",
+      "description": "Este test valida el flujo de registro con credenciales v�lidas."
+    },
+    "steps": [
+      {
+        "action": "Abrir la p�gina de registro",
+        "data": "",
+        "result": "Se muestra el formulario de registro"
+      },
+      {
+        "action": "Introducir usuario, email y contrase�a v�lidos",
+        "data": "usuario: demo\\nemail:demo@example.com\\ncontrase�a: Demo1234",
+        "result": ""
+      },
+      {
+        "action": "Pulsar el bot�n �Registrar�",
+        "data": "",
+        "result": "El usuario se guarda en el sistema, queda autenticado y redirigido al dashboard"
+      }
+    ],
+    "xray_test_repository_folder": "Public/Auth/PruebaDavidMedina21_04_2025",
+    "xray_test_sets": [
+      "PruebaJsonPython"
+    ]
+  }
+]
