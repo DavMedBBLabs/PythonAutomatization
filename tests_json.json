@@ -1,0 +1,33 @@
+[
+  {
+    "testtype": "Manual",
+    "fields": {
+      "project": {
+        "key": "RTBQ"
+      },
+      "summary": "Prueba de validaciones con condicionales",
+      "description": "Este test valida el flujo de login con credenciales válidas."
+    },
+    "steps": [
+      {
+        "action": "Abrir la página de login",
+        "data": "",
+        "result": "Se muestra el formulario de autenticación"
+      },
+      {
+        "action": "Introducir usuario y contraseña válidos",
+        "data": "usuario: demo\\ncontraseña: Demo1234",
+        "result": ""
+      },
+      {
+        "action": "Pulsar el botón “Entrar”",
+        "data": "",
+        "result": "El usuario queda autenticado y redirigido al dashboard"
+      }
+    ],
+    "xray_test_repository_folder": "Public/Auth/PruebaDavidMedina220425",
+    "xray_test_sets": [
+      "RTBQ-46"
+    ]
+  }
+]

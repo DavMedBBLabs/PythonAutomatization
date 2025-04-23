@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 # Cargar variables de entorno
 load_dotenv()
 
+
 # -----------------------------------
 # Decoradores
 # -----------------------------------
@@ -22,6 +23,7 @@ def wait_for(seconds):
 def clean_screen():
     # Limpiar la consola
     os.system('cls' if os.name == 'nt' else 'clear')
+
 
 # -----------------------------------
 # Verificar archivo existente
@@ -47,6 +49,7 @@ def request_name(path_env):
         if verify_existing_file(input_file):
             break
     return input_file
+
 
 # -----------------------------------
 # Fase 0: Autenticación
@@ -75,6 +78,7 @@ def get_token():
     data = resp.json()
     return data
 
+
 # -----------------------------------
 # Fase 1: Configuración y carga
 # -----------------------------------
@@ -82,9 +86,8 @@ def get_token():
 def get_configuration():
     """
     Pide al usuario la configuración básica:
-      - Ruta del CSV de entrada
+      - Nombre del proyecto a trabajar
       - Clave de proyecto por defecto
-      - Define la URL del endpoint de importación
     Obtiene el token llamando a get_token().
     Calcula la ruta de salida JSON basada en el nombre del CSV.
     """
@@ -107,6 +110,7 @@ def get_configuration():
         'endpoint_url': endpoint_url,
         'output_json': output_json
     }
+
 
 # -----------------------------------
 # Fase 2: Generación de JSON
@@ -166,6 +170,7 @@ def generate_tests_json(input_csv: str, project_key: str, output_json: str):
     print(f"Generados {len(tests)} tests en '{output_json}'.")
     return tests
 
+
 # -----------------------------------
 # Fase 3: Envío a Xray
 # -----------------------------------
@@ -190,6 +195,7 @@ def send_json_to_xray(output_json: str, token: str, endpoint_url: str):
             print("JSON enviado exitosamente.")
         else:
             print(f"Error al enviar JSON: {response.status_code} - {response.text}")
+
 
 # -----------------------------------
 # Menú interactivo
