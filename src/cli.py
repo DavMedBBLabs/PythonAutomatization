@@ -10,9 +10,11 @@ from .test_generator import generate_tests_json
 def get_configuration() -> config.Config:
     input_csv = request_file_name(config.env_path())
     project_key = input('Clave de proyecto por defecto: ').strip()
-    endpoint_url = os.getenv('XRAY_IMPORT_URL', 'https://xray.cloud.getxray.app/api/v1/import/test/bulk')
+    endpoint_url = os.getenv('XRAY_IMPORT_URL',
+                            'https://xray.cloud.getxray.app/api/v1/import/test/bulk')
     token = get_token()
-    output_json = f"{os.path.splitext(input_csv)[0]}.json"
+    output_json = os.path.join(
+        config.json_path(), f"{os.path.splitext(input_csv)[0]}.json")
     return config.Config(input_csv, project_key, token, endpoint_url, output_json)
 
 
@@ -32,14 +34,16 @@ def interactive_menu():
 
         if choice == '1':
             cfg.input_csv = request_file_name(config.env_path())
-            cfg.output_json = f"{os.path.splitext(cfg.input_csv)[0]}.json"
+            cfg.output_json = os.path.join(
+                config.json_path(), f"{os.path.splitext(cfg.input_csv)[0]}.json")
         elif choice == '2':
             cfg.project_key = input('Nueva project key: ').strip()
         elif choice == '3':
             cfg.token = get_token()
             print('Token actualizado.')
         elif choice == '4':
-            generate_tests_json(cfg.input_csv, cfg.project_key, cfg.output_json)
+            csv_path = os.path.join(config.env_path(), cfg.input_csv)
+            generate_tests_json(csv_path, cfg.project_key, cfg.output_json)
         elif choice == '5':
             send_json_to_xray(cfg.output_json, cfg.token, cfg.endpoint_url)
         elif choice == '6':

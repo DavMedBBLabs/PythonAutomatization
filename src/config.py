@@ -16,3 +16,10 @@ class Config:
 
 def env_path() -> str:
     return os.getenv('PATH_FILES', '.')
+
+
+def json_path() -> str:
+    """Return path for generated JSON files ensuring it exists."""
+    path = os.path.join(env_path(), 'json')
+    os.makedirs(path, exist_ok=True)
+    return path
