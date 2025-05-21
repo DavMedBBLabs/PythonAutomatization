@@ -24,7 +24,6 @@ def clean_screen():
     # Limpiar la consola
     os.system('cls' if os.name == 'nt' else 'clear')
 
-
 # -----------------------------------
 # Verificar archivo existente
 # -----------------------------------
@@ -37,7 +36,6 @@ def verify_existing_file(path_file):
         clean_screen()
         return False
     return True
-    
 
 # -----------------------------------
 # Solicitar un nombre de archivo
@@ -49,7 +47,6 @@ def request_name(path_env):
         if verify_existing_file(input_file):
             break
     return input_file
-
 
 # -----------------------------------
 # Fase 0: Autenticación
@@ -91,9 +88,8 @@ def get_configuration():
     Obtiene el token llamando a get_token().
     Calcula la ruta de salida JSON basada en el nombre del CSV.
     """
-    path_env = os.getenv('PATH_FILES')
 
-    input_csv = request_name(path_env)
+    input_csv = request_name(os.getenv('PATH_FILES'))
 
     project_key = input("Clave de proyecto por defecto: ").strip()
 
@@ -101,7 +97,7 @@ def get_configuration():
     endpoint_url = os.getenv('XRAY_IMPORT_URL', 'https://xray.cloud.getxray.app/api/v1/import/test/bulk')
     token = get_token()
 
-    output_json = f"{os.path.splitext(input_csv)[0]}_json.json"
+    output_json = f"{os.path.splitext(input_csv)[0]}.json"
 
     return {
         'input_csv': input_csv,
@@ -170,7 +166,6 @@ def generate_tests_json(input_csv: str, project_key: str, output_json: str):
     print(f"Generados {len(tests)} tests en '{output_json}'.")
     return tests
 
-
 # -----------------------------------
 # Fase 3: Envío a Xray
 # -----------------------------------
@@ -217,7 +212,7 @@ def main():
 
         if choice == '1':
             config['input_csv'] = input("Nuevo path del CSV de entrada: ").strip()
-            config['output_json'] = f"{os.path.splitext(config['input_csv'])[0]}_json.json"
+            config['output_json'] = f"{os.path.splitext(config['input_csv'])[0]}.json"
         elif choice == '2':
             config['project_key'] = input("Nueva project key: ").strip()
         elif choice == '3':
