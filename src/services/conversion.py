@@ -93,3 +93,11 @@ def excels_to_csvs(excel_dir: str, csv_dir: str):
         except Exception as exc:  # pragma: no cover - runtime errors only
             failures.append((excel_path, str(exc)))
     return successes, failures
+
+
+def excel_to_csv(excel_path: str, csv_path: str):
+    """Convert a single Excel file to CSV."""
+    df = pd.read_excel(excel_path, dtype=str).fillna('')
+    df.to_csv(csv_path, index=False, encoding='utf-8')
+    print(f"Generado '{csv_path}' desde '{excel_path}'.")
+    return csv_path
