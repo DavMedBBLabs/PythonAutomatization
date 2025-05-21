@@ -32,3 +32,32 @@ def request_file_name(path_env: str) -> str:
         if verify_existing_file(input_file):
             break
     return f'{file_name}.csv'
+
+
+def request_json_file(path_env: str) -> str:
+    """Prompt the user for a JSON file name and return the full path."""
+    while True:
+        file_name = input('Nombre del archivo JSON (sin extensión .json): ').strip()
+        json_file = os.path.join(path_env, f'{file_name}.json')
+        if verify_existing_file(json_file):
+            break
+    return json_file
+
+
+def request_excel_file(path_env: str) -> str:
+    """Prompt the user for an Excel file name and return the full path."""
+    while True:
+        file_name = input('Nombre del archivo Excel (sin extensión): ').strip()
+        xlsx = os.path.join(path_env, f'{file_name}.xlsx')
+        xls = os.path.join(path_env, f'{file_name}.xls')
+        if verify_existing_file(xlsx):
+            return xlsx
+        if verify_existing_file(xls):
+            return xls
+    return ''
+
+
+def confirm_action(message: str) -> bool:
+    """Ask the user to confirm an action."""
+    resp = input(f"{message} (s/N): ").strip().lower()
+    return resp in ('s', 'si', 'y', 'yes')
