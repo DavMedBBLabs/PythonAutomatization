@@ -20,6 +20,13 @@ def env_path() -> str:
 
 def json_path() -> str:
     """Return path for generated JSON files ensuring it exists."""
-    path = os.path.join(env_path(), 'json')
-    os.makedirs(path, exist_ok=True)
-    return path
+    base = os.getenv('PATH_JSON', os.path.join(env_path(), 'json'))
+    os.makedirs(base, exist_ok=True)
+    return base
+
+
+def excel_path() -> str:
+    """Return path for Excel source files ensuring it exists."""
+    base = os.getenv('PATH_EXCEL', os.path.join(env_path(), 'excel'))
+    os.makedirs(base, exist_ok=True)
+    return base
