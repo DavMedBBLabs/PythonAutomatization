@@ -5,7 +5,9 @@ import re
 
 
 def generate_tests_json(input_csv: str, project_key: str, output_json: str):
-    df = pd.read_csv(input_csv, dtype=str, encoding='utf-8', sep=';').fillna('')
+    df = pd.read_csv(input_csv, dtype=str, encoding='utf-8', sep=',', skipinitialspace=True).fillna('')
+    df = df.dropna(how='all')
+    df.columns = df.columns.str.strip()
 
     if 'Test ID' not in df.columns:
         df['Test ID'] = df.groupby('Summary').ngroup()
