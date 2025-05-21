@@ -6,14 +6,28 @@ import pandas as pd
 import re
 
 
-def generate_tests_json(input_csv: str, project_key: str, output_json: str):
+def generate_tests_json(
+    input_csv: str, project_key: str, output_json: str, sep: str = ','
+) -> list[dict]:
     """Convert a CSV test specification to an Xray-compatible JSON file."""
-    df = (
-        pd.read_csv(input_csv, dtype=str, encoding='utf-8', sep=',', skipinitialspace=True)
-        .fillna('')
-    )
+    try:
+        df = pd.read_csv(
+            input_csv,
+            dtype=str,
+            encoding='utf-8',
+            sep=sep,
+            skipinitialspace=True,
+        ).fillna('')
+    except Exception as exc:  # pragma: no cover - runtime errors only
+        raise ValueError(f'No se pudo leer CSV {input_csv}: {exc}')
     df = df.dropna(how='all')
     df.columns = df.columns.str.strip()
+
+    required = {'Summary', 'Step'}
+    if not required.issubset(df.columns):
+        raise ValueError(
+            'El CSV no contiene las columnas requeridas o el separador es incorrecto'
+        )
 
     if 'Test ID' not in df.columns:
         df['Test ID'] = df.groupby('Summary').ngroup()
@@ -58,7 +72,9 @@ def generate_tests_json(input_csv: str, project_key: str, output_json: str):
     return tests
 
 
-def generate_jsons_from_csvs(csv_dir: str, project_key: str, json_dir: str):
+def generate_jsons_from_csvs(
+    csv_dir: str, project_key: str, json_dir: str, sep: str = ','
+) -> tuple[list[str], list[tuple[str, str]]]:
     """Convert all CSV files in *csv_dir* to JSON format in *json_dir*."""
     successes: list[str] = []
     failures: list[tuple[str, str]] = []
@@ -69,7 +85,7 @@ def generate_jsons_from_csvs(csv_dir: str, project_key: str, json_dir: str):
         json_name = f"{os.path.splitext(name)[0]}.json"
         json_path = os.path.join(json_dir, json_name)
         try:
-            generate_tests_json(csv_path, project_key, json_path)
+            generate_tests_json(csv_path, project_key, json_path, sep)
             successes.append(csv_path)
         except Exception as exc:  # pragma: no cover - runtime errors only
             failures.append((csv_path, str(exc)))
@@ -87,8 +103,7 @@ def excels_to_csvs(excel_dir: str, csv_dir: str):
         csv_name = f"{os.path.splitext(name)[0]}.csv"
         csv_path = os.path.join(csv_dir, csv_name)
         try:
-            df = pd.read_excel(excel_path, dtype=str).fillna('')
-            df.to_csv(csv_path, index=False, encoding='utf-8')
+            excel_to_csv(excel_path, csv_path)
             successes.append(csv_path)
         except Exception as exc:  # pragma: no cover - runtime errors only
             failures.append((excel_path, str(exc)))
@@ -97,7 +112,10 @@ def excels_to_csvs(excel_dir: str, csv_dir: str):
 
 def excel_to_csv(excel_path: str, csv_path: str):
     """Convert a single Excel file to CSV."""
-    df = pd.read_excel(excel_path, dtype=str).fillna('')
-    df.to_csv(csv_path, index=False, encoding='utf-8')
+    try:
+        df = pd.read_excel(excel_path, dtype=str).fillna('')
+        df.to_csv(csv_path, index=False, encoding='utf-8')
+    except Exception as exc:  # pragma: no cover - runtime errors only
+        raise ValueError(f'Error al convertir {excel_path}: {exc}')
     print(f"Generado '{csv_path}' desde '{excel_path}'.")
     return csv_path
