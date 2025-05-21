@@ -15,7 +15,8 @@ class Config:
 
 
 def env_path() -> str:
-    return os.getenv('PATH_FILES', '.')
+    """Return the base directory for CSV files."""
+    return os.getenv('PATH_CSV', '.')
 
 
 def json_path() -> str:
