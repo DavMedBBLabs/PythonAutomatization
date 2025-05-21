@@ -12,6 +12,7 @@ class Config:
     token: str
     endpoint_url: str
     output_json: str
+    csv_separator: str = ','
 
 
 def env_path() -> str:
@@ -24,7 +25,6 @@ def json_path() -> str:
     base = os.getenv('PATH_JSON', os.path.join(env_path(), 'json'))
     os.makedirs(base, exist_ok=True)
     return base
-
 
 def excel_path() -> str:
     """Return path for Excel source files ensuring it exists."""
