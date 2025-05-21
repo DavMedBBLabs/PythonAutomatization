@@ -32,3 +32,13 @@ def request_file_name(path_env: str) -> str:
         if verify_existing_file(input_file):
             break
     return f'{file_name}.csv'
+
+
+def request_json_file(path_env: str) -> str:
+    """Prompt the user for a JSON file name and return the full path."""
+    while True:
+        file_name = input('Nombre del archivo JSON (sin extensión .json): ').strip()
+        json_file = os.path.join(path_env, f'{file_name}.json')
+        if verify_existing_file(json_file):
+            break
+    return json_file

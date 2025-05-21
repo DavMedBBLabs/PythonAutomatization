@@ -2,8 +2,8 @@ import os
 from dataclasses import asdict
 
 from . import config
-from .utils import clean_screen, wait_for, request_file_name
-from .xray import get_token, send_json_to_xray
+from .utils import clean_screen, wait_for, request_file_name, request_json_file
+from .xray import get_token, send_json_to_xray, send_jsons_to_xray
 from .test_generator import generate_tests_json
 
 
@@ -29,7 +29,8 @@ def interactive_menu():
         print('3. Regenerar token de autenticación')
         print('4. Generar JSON')
         print('5. Enviar JSON a Xray')
-        print('6. Salir')
+        print('6. Enviar todos los JSON a Xray')
+        print('7. Salir')
         choice = input('Seleccione una opción: ').strip()
 
         if choice == '1':
@@ -45,8 +46,16 @@ def interactive_menu():
             csv_path = os.path.join(config.env_path(), cfg.input_csv)
             generate_tests_json(csv_path, cfg.project_key, cfg.output_json)
         elif choice == '5':
-            send_json_to_xray(cfg.output_json, cfg.token, cfg.endpoint_url)
+            json_path = request_json_file(config.json_path())
+            send_json_to_xray(json_path, cfg.token, cfg.endpoint_url)
         elif choice == '6':
+            json_dir = config.json_path()
+            files = [os.path.join(json_dir, f) for f in os.listdir(json_dir) if f.endswith('.json')]
+            successes, failures = send_jsons_to_xray(files, cfg.token, cfg.endpoint_url)
+            print(f'Envío completado. Éxitos: {len(successes)} - Fallos: {len(failures)}')
+            for fpath, reason in failures:
+                print(f"Falló {os.path.basename(fpath)}: {reason}")
+        elif choice == '7':
             print('Saliendo...')
             wait_for(1)
             clean_screen()
