@@ -31,4 +31,4 @@ def request_file_name(path_env: str) -> str:
         input_file = os.path.join(path_env, f'{file_name}.csv')
         if verify_existing_file(input_file):
             break
-    return input_file
+    return f'{file_name}.csv'
