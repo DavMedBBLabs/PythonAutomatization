@@ -8,6 +8,7 @@ from .utils import (
     request_json_file,
     request_excel_file,
     confirm_action,
+    list_files,
 )
 from .services import (
     generate_tests_json,
@@ -22,7 +23,11 @@ from .services import (
 
 def get_configuration() -> config.Config:
     """Return initial configuration without requesting a CSV file."""
-    project_key = input('Clave de proyecto por defecto [DUDBQ]: ').strip() or 'DUDBQ'
+    while True:
+        project_key = input('Clave de proyecto por defecto [DUDBQ]: ').strip()
+        if project_key:
+            break
+        print('Debe ingresar la clave de proyecto.')
     endpoint_url = os.getenv(
         'XRAY_IMPORT_URL',
         'https://xray.cloud.getxray.app/api/v1/import/test/bulk',
@@ -32,54 +37,78 @@ def get_configuration() -> config.Config:
     return config.Config('', project_key, token, endpoint_url, '')
 
 
-def interactive_menu():
-    clean_screen()
-    cfg = get_configuration()
-
+def excel_menu(cfg: config.Config) -> None:
+    """Handle Excel related actions."""
     while True:
-        print('\n--- Menú Xray CSV->JSON -> API ---')
-        print(f"1. Cambiar project key (actual: {cfg.project_key})")
-        print('2. Regenerar token de autenticación')
-        print('3. Convertir Excel a CSV')
-        print('4. Convertir Excel a CSV en lote')
-        print('5. Convertir CSV a JSON')
-        print('6. Convertir CSV a JSON en lote')
-        print('7. Enviar JSON a Xray')
-        print('8. Enviar JSON a Xray en lote')
-        print('9. Limpiar JSONs')
-        print('0. Salir')
-        choice = input('Seleccione una opción: ').strip()
+        print('\n--- Gestión de Archivos EXCEL ---')
+        print('1. Convertir Excel a CSV')
+        print('2. Convertir Excel a CSV en lote')
+        print('3. Listar archivos Excel')
+        print('0. Volver')
+        opt = input('Seleccione una opción: ').strip()
 
-        if choice == '1':
-            cfg.project_key = input('Nueva project key: ').strip() or cfg.project_key
-        elif choice == '2':
-            cfg.token = XrayClient._obtain_token()
-            print('Token actualizado.')
-        elif choice == '3':
+        if opt == '1':
             excel_path = request_excel_file(config.excel_path())
             base = os.path.splitext(os.path.basename(excel_path))[0]
             csv_path = os.path.join(config.env_path(), f"{base}.csv")
             excel_to_csv(excel_path, csv_path)
-        elif choice == '4':
+        elif opt == '2':
             excel_dir = config.excel_path()
             csv_dir = config.env_path()
             successes, failures = excels_to_csvs(excel_dir, csv_dir)
             print(f'Conversión completada. Éxitos: {len(successes)} - Fallos: {len(failures)}')
             for fpath, reason in failures:
                 print(f"Falló {os.path.basename(fpath)}: {reason}")
-        elif choice == '5':
+        elif opt == '3':
+            list_files(config.excel_path(), ('.xlsx', '.xls'))
+        elif opt == '0':
+            break
+        else:
+            print('Opción inválida. Intente de nuevo.')
+
+
+def csv_menu(cfg: config.Config) -> None:
+    """Handle CSV related actions."""
+    while True:
+        print('\n--- Gestión de Archivos CSV ---')
+        print('1. Convertir CSV a JSON')
+        print('2. Convertir CSV a JSON en lote')
+        print('3. Listar archivos CSV')
+        print('0. Volver')
+        opt = input('Seleccione una opción: ').strip()
+
+        if opt == '1':
             csv_name = request_file_name(config.env_path())
             csv_path = os.path.join(config.env_path(), csv_name)
             json_out = os.path.join(config.json_path(), f"{os.path.splitext(csv_name)[0]}.json")
             generate_tests_json(csv_path, cfg.project_key, json_out)
-        elif choice == '6':
+        elif opt == '2':
             csv_dir = config.env_path()
             json_dir = config.json_path()
             successes, failures = generate_jsons_from_csvs(csv_dir, cfg.project_key, json_dir)
             print(f'Conversión completada. Éxitos: {len(successes)} - Fallos: {len(failures)}')
             for fpath, reason in failures:
                 print(f"Falló {os.path.basename(fpath)}: {reason}")
-        elif choice == '7':
+        elif opt == '3':
+            list_files(config.env_path(), ('.csv',))
+        elif opt == '0':
+            break
+        else:
+            print('Opción inválida. Intente de nuevo.')
+
+
+def json_menu(cfg: config.Config) -> None:
+    """Handle JSON related actions."""
+    while True:
+        print('\n--- Gestión de Archivos JSON ---')
+        print('1. Enviar JSON a Xray')
+        print('2. Enviar JSON a Xray en lote')
+        print('3. Limpiar JSONs')
+        print('4. Listar archivos JSON')
+        print('0. Volver')
+        opt = input('Seleccione una opción: ').strip()
+
+        if opt == '1':
             json_path = request_json_file(config.json_path())
             if confirm_action(f"Enviar '{os.path.basename(json_path)}' a Xray?"):
                 client = XrayClient(cfg.token, cfg.endpoint_url)
@@ -88,7 +117,7 @@ def interactive_menu():
                     print('JSON enviado exitosamente.')
                 except Exception as exc:
                     print(f'Error al enviar JSON: {exc}')
-        elif choice == '8':
+        elif opt == '2':
             send_opt = input('1. Enviar por lista de números\n2. Enviar todo\nSeleccione una opción: ').strip()
             json_dir = config.json_path()
             all_files = [f for f in os.listdir(json_dir) if f.endswith('.json')]
@@ -106,7 +135,7 @@ def interactive_menu():
                 print(f'Envío completado. Éxitos: {len(successes)} - Fallos: {len(failures)}')
                 for fpath, reason in failures:
                     print(f"Falló {os.path.basename(fpath)}: {reason}")
-        elif choice == '9':
+        elif opt == '3':
             clean_opt = input('1. Limpiar un archivo\n2. Limpiar todo\nSeleccione una opción: ').strip()
             json_dir = config.json_path()
             if clean_opt == '1':
@@ -116,6 +145,39 @@ def interactive_menu():
             else:
                 cleaned = clean_json_directory(json_dir)
                 print(f'{len(cleaned)} archivos limpiados.')
+        elif opt == '4':
+            list_files(config.json_path(), ('.json',))
+        elif opt == '0':
+            break
+        else:
+            print('Opción inválida. Intente de nuevo.')
+
+
+def interactive_menu():
+    clean_screen()
+    cfg = get_configuration()
+
+    while True:
+        print('\n--- Menú QA Automatización ---')
+        print(f"1. Cambiar project key (actual: {cfg.project_key})")
+        print('2. Regenerar token de autenticación')
+        print('3. Gestión de Archivos EXCEL')
+        print('4. Gestión de Archivos CSV')
+        print('5. Gestión de Archivos JSON')
+        print('0. Salir')
+        choice = input('Seleccione una opción: ').strip()
+
+        if choice == '1':
+            cfg.project_key = input('Nueva project key: ').strip() or cfg.project_key
+        elif choice == '2':
+            cfg.token = XrayClient._obtain_token()
+            print('Token actualizado.')
+        elif choice == '3':
+            excel_menu(cfg)
+        elif choice == '4':
+            csv_menu(cfg)
+        elif choice == '5':
+            json_menu(cfg)
         elif choice == '0':
             print('Saliendo...')
             wait_for(1)
