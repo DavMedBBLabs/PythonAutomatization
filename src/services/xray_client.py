@@ -2,18 +2,27 @@
 from __future__ import annotations
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
 
 class XrayClient:
     """Simple client to send test specifications to Xray."""
 
-    def __init__(self, token: str | None = None, endpoint_url: str | None = None):
+    def __init__(
+        self,
+        token: str | None = None,
+        endpoint_url: str | None = None,
+        *,
+        max_workers: int = 5,
+    ):
         self.token = token or self._obtain_token()
         self.endpoint_url = endpoint_url or os.getenv(
             'XRAY_IMPORT_URL',
             'https://xray.cloud.getxray.app/api/v1/import/test/bulk',
         )
+        self._session = requests.Session()
+        self._max_workers = max_workers
 
     @staticmethod
     def _obtain_token() -> str:
@@ -46,7 +55,7 @@ class XrayClient:
             'Content-Type': 'application/json',
             'Authorization': f'Bearer {self.token}',
         }
-        resp = requests.post(
+        resp = self._session.post(
             self.endpoint_url,
             headers=headers,
             data=json_body,
@@ -55,13 +64,26 @@ class XrayClient:
         return resp
 
     def send_multiple(self, json_files: list[str]):
-        """Send multiple JSON files sequentially."""
+        """Send multiple JSON files using a thread pool."""
         successes: list[str] = []
         failures: list[tuple[str, str]] = []
-        for json_file in json_files:
-            try:
-                self.send_json(json_file)
-                successes.append(json_file)
-            except Exception as exc:  # pragma: no cover - runtime errors only
-                failures.append((json_file, str(exc)))
+
+        def _send(path: str) -> str:
+            self.send_json(path)
+            return path
+
+        with ThreadPoolExecutor(max_workers=self._max_workers) as exe:
+            future_to_file = {exe.submit(_send, f): f for f in json_files}
+            for fut in as_completed(future_to_file):
+                fpath = future_to_file[fut]
+                try:
+                    fut.result()
+                    successes.append(fpath)
+                except Exception as exc:  # pragma: no cover - runtime errors only
+                    failures.append((fpath, str(exc)))
+
         return successes, failures
+
+    def close(self) -> None:
+        """Close underlying HTTP session."""
+        self._session.close()

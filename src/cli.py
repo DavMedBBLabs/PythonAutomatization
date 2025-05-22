@@ -121,6 +121,8 @@ def json_menu(cfg: config.Config) -> None:
                     print('JSON enviado exitosamente.')
                 except Exception as exc:
                     print(f'Error al enviar JSON: {exc}')
+                finally:
+                    client.close()
         elif opt == '2':
             send_opt = input('1. Enviar por lista de números\n2. Enviar todo\nSeleccione una opción: ').strip()
             json_dir = config.json_path()
@@ -135,10 +137,15 @@ def json_menu(cfg: config.Config) -> None:
                 print('No se encontraron archivos para enviar.')
             elif confirm_action(f"Enviar {len(files)} archivos a Xray?"):
                 client = XrayClient(cfg.token, cfg.endpoint_url)
-                successes, failures = client.send_multiple(files)
-                print(f'Envío completado. Éxitos: {len(successes)} - Fallos: {len(failures)}')
-                for fpath, reason in failures:
-                    print(f"Falló {os.path.basename(fpath)}: {reason}")
+                try:
+                    successes, failures = client.send_multiple(files)
+                    print(
+                        f'Envío completado. Éxitos: {len(successes)} - Fallos: {len(failures)}'
+                    )
+                    for fpath, reason in failures:
+                        print(f"Falló {os.path.basename(fpath)}: {reason}")
+                finally:
+                    client.close()
         elif opt == '3':
             clean_opt = input('1. Limpiar un archivo\n2. Limpiar todo\nSeleccione una opción: ').strip()
             json_dir = config.json_path()

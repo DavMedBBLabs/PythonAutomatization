@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json
 import os
+from pathlib import Path
 import pandas as pd
 import re
 
@@ -12,9 +13,11 @@ def generate_tests_json(
     input_csv: str, project_key: str, output_json: str, sep: str = ','
 ) -> list[dict]:
     """Convert a CSV test specification to an Xray-compatible JSON file."""
+    csv_path = Path(input_csv)
+    out_path = Path(output_json)
     try:
         df = pd.read_csv(
-            input_csv,
+            csv_path,
             dtype=str,
             encoding='utf-8',
             sep=sep,
@@ -69,10 +72,10 @@ def generate_tests_json(
 
     clean_json_data(tests)
 
-    with open(output_json, 'w', encoding='utf-8') as f:
+    with out_path.open('w', encoding='utf-8') as f:
         json.dump(tests, f, ensure_ascii=False, indent=2)
 
-    print(f"Generados {len(tests)} tests en '{output_json}'.")
+    print(f"Generados {len(tests)} tests en '{out_path}'.")
     return tests
 
 
@@ -82,17 +85,15 @@ def generate_jsons_from_csvs(
     """Convert all CSV files in *csv_dir* to JSON format in *json_dir*."""
     successes: list[str] = []
     failures: list[tuple[str, str]] = []
-    for name in os.listdir(csv_dir):
-        if not name.lower().endswith('.csv'):
-            continue
-        csv_path = os.path.join(csv_dir, name)
-        json_name = f"{os.path.splitext(name)[0]}.json"
-        json_path = os.path.join(json_dir, json_name)
+    csv_path = Path(csv_dir)
+    json_path = Path(json_dir)
+    for csv_file in csv_path.glob('*.csv'):
+        out_file = json_path / f"{csv_file.stem}.json"
         try:
-            generate_tests_json(csv_path, project_key, json_path, sep)
-            successes.append(csv_path)
+            generate_tests_json(str(csv_file), project_key, str(out_file), sep)
+            successes.append(str(csv_file))
         except Exception as exc:  # pragma: no cover - runtime errors only
-            failures.append((csv_path, str(exc)))
+            failures.append((str(csv_file), str(exc)))
     return successes, failures
 
 
@@ -100,26 +101,33 @@ def excels_to_csvs(excel_dir: str, csv_dir: str):
     """Convert Excel files in *excel_dir* to CSV format in *csv_dir*."""
     successes: list[str] = []
     failures: list[tuple[str, str]] = []
-    for name in os.listdir(excel_dir):
-        if not name.lower().endswith(('.xlsx', '.xls')):
-            continue
-        excel_path = os.path.join(excel_dir, name)
-        csv_name = f"{os.path.splitext(name)[0]}.csv"
-        csv_path = os.path.join(csv_dir, csv_name)
+    excel_path = Path(excel_dir)
+    csv_path = Path(csv_dir)
+    for file in excel_path.glob('*.xlsx'):
+        csv_file = csv_path / f"{file.stem}.csv"
         try:
-            excel_to_csv(excel_path, csv_path)
-            successes.append(csv_path)
+            excel_to_csv(str(file), str(csv_file))
+            successes.append(str(csv_file))
         except Exception as exc:  # pragma: no cover - runtime errors only
-            failures.append((excel_path, str(exc)))
+            failures.append((str(file), str(exc)))
+    for file in excel_path.glob('*.xls'):
+        csv_file = csv_path / f"{file.stem}.csv"
+        try:
+            excel_to_csv(str(file), str(csv_file))
+            successes.append(str(csv_file))
+        except Exception as exc:  # pragma: no cover - runtime errors only
+            failures.append((str(file), str(exc)))
     return successes, failures
 
 
 def excel_to_csv(excel_path: str, csv_path: str):
     """Convert a single Excel file to CSV."""
+    src = Path(excel_path)
+    dst = Path(csv_path)
     try:
-        df = pd.read_excel(excel_path, dtype=str).fillna('')
-        df.to_csv(csv_path, index=False, encoding='utf-8')
+        df = pd.read_excel(src, dtype=str).fillna('')
+        df.to_csv(dst, index=False, encoding='utf-8')
     except Exception as exc:  # pragma: no cover - runtime errors only
-        raise ValueError(f'Error al convertir {excel_path}: {exc}')
-    print(f"Generado '{csv_path}' desde '{excel_path}'.")
-    return csv_path
+        raise ValueError(f'Error al convertir {src}: {exc}')
+    print(f"Generado '{dst}' desde '{src}'.")
+    return str(dst)
