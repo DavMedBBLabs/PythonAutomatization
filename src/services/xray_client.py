@@ -17,6 +17,7 @@ class XrayClient:
 
     @staticmethod
     def _obtain_token() -> str:
+        """Return an auth token, accepting JSON or plain text responses."""
         client_id = os.getenv('CLIENT_ID')
         client_secret = os.getenv('CLIENT_SECRET')
         auth_url = os.getenv('AUTH_URL')
@@ -27,8 +28,12 @@ class XrayClient:
         headers = {'Content-Type': 'application/json'}
         resp = requests.post(auth_url, headers=headers, json=payload)
         resp.raise_for_status()
-        data = resp.json()
-        return data['token'] if isinstance(data, dict) else resp.text
+        try:
+            data = resp.json()
+            token = data['token'] if isinstance(data, dict) else data
+        except ValueError:
+            token = resp.text
+        return token.strip()
 
     def send_json(self, json_path: str):
         """Send a JSON file to Xray."""
@@ -36,11 +41,16 @@ class XrayClient:
             raise FileNotFoundError(json_path)
         with open(json_path, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
+        json_body = json.dumps(json_data, ensure_ascii=False).encode('utf-8')
         headers = {
             'Content-Type': 'application/json',
             'Authorization': f'Bearer {self.token}',
         }
-        resp = requests.post(self.endpoint_url, headers=headers, json=json_data)
+        resp = requests.post(
+            self.endpoint_url,
+            headers=headers,
+            data=json_body,
+        )
         resp.raise_for_status()
         return resp
 
