@@ -24,7 +24,7 @@ from .services import (
 def get_configuration() -> config.Config:
     """Return initial configuration without requesting a CSV file."""
     while True:
-        project_key = input('Clave de proyecto por defecto [DUDBQ]: ').strip()
+        project_key = input('Clave de proyecto por defecto: ').strip()
         if project_key:
             break
         print('Debe ingresar la clave de proyecto.')
@@ -71,25 +71,29 @@ def csv_menu(cfg: config.Config) -> None:
     """Handle CSV related actions."""
     while True:
         print('\n--- Gestión de Archivos CSV ---')
-        print('1. Convertir CSV a JSON')
-        print('2. Convertir CSV a JSON en lote')
-        print('3. Listar archivos CSV')
+        print(f"1. Cambiar separador CSV (actual: {cfg.csv_separator})")
+        print('2. Convertir CSV a JSON')
+        print('3. Convertir CSV a JSON en lote')
+        print('4. Listar archivos CSV')
         print('0. Volver')
         opt = input('Seleccione una opción: ').strip()
 
         if opt == '1':
+            new_sep = input('Nuevo separador (, o ;): ').strip()
+            cfg.csv_separator = ';' if new_sep == ';' else ','
+        elif opt == '2':
             csv_name = request_file_name(config.env_path())
             csv_path = os.path.join(config.env_path(), csv_name)
             json_out = os.path.join(config.json_path(), f"{os.path.splitext(csv_name)[0]}.json")
-            generate_tests_json(csv_path, cfg.project_key, json_out)
-        elif opt == '2':
+            generate_tests_json(csv_path, cfg.project_key, json_out, cfg.csv_separator)
+        elif opt == '3':
             csv_dir = config.env_path()
             json_dir = config.json_path()
-            successes, failures = generate_jsons_from_csvs(csv_dir, cfg.project_key, json_dir)
+            successes, failures = generate_jsons_from_csvs(csv_dir, cfg.project_key, json_dir, cfg.csv_separator)
             print(f'Conversión completada. Éxitos: {len(successes)} - Fallos: {len(failures)}')
             for fpath, reason in failures:
                 print(f"Falló {os.path.basename(fpath)}: {reason}")
-        elif opt == '3':
+        elif opt == '4':
             list_files(config.env_path(), ('.csv',))
         elif opt == '0':
             break

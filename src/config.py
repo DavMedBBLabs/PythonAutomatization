@@ -12,6 +12,7 @@ class Config:
     token: str
     endpoint_url: str
     output_json: str
+    csv_separator: str = os.getenv('CSV_SEPARATOR', ',')
 
 
 def env_path() -> str:
