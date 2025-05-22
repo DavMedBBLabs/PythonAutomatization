@@ -5,8 +5,11 @@ from .conversion import (
     excels_to_csvs,
     excel_to_csv,
 )
-from .xray_client import (
-    XrayClient,
+from .xray_client import XrayClient
+from .cleanup import (
+    clean_json_data,
+    clean_json_file,
+    clean_json_directory,
 )
 
 __all__ = [
@@ -15,4 +18,7 @@ __all__ = [
     'excels_to_csvs',
     'excel_to_csv',
     'XrayClient',
+    'clean_json_data',
+    'clean_json_file',
+    'clean_json_directory',
 ]

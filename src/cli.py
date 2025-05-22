@@ -15,6 +15,8 @@ from .services import (
     excels_to_csvs,
     excel_to_csv,
     XrayClient,
+    clean_json_file,
+    clean_json_directory,
 )
 
 
@@ -44,6 +46,7 @@ def interactive_menu():
         print('6. Convertir CSV a JSON en lote')
         print('7. Enviar JSON a Xray')
         print('8. Enviar JSON a Xray en lote')
+        print('9. Limpiar JSONs')
         print('0. Salir')
         choice = input('Seleccione una opción: ').strip()
 
@@ -103,6 +106,16 @@ def interactive_menu():
                 print(f'Envío completado. Éxitos: {len(successes)} - Fallos: {len(failures)}')
                 for fpath, reason in failures:
                     print(f"Falló {os.path.basename(fpath)}: {reason}")
+        elif choice == '9':
+            clean_opt = input('1. Limpiar un archivo\n2. Limpiar todo\nSeleccione una opción: ').strip()
+            json_dir = config.json_path()
+            if clean_opt == '1':
+                json_file = request_json_file(json_dir)
+                clean_json_file(json_file)
+                print(f"Archivo '{os.path.basename(json_file)}' limpiado.")
+            else:
+                cleaned = clean_json_directory(json_dir)
+                print(f'{len(cleaned)} archivos limpiados.')
         elif choice == '0':
             print('Saliendo...')
             wait_for(1)

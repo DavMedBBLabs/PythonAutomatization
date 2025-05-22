@@ -5,6 +5,8 @@ import os
 import pandas as pd
 import re
 
+from .cleanup import clean_json_data
+
 
 def generate_tests_json(input_csv: str, project_key: str, output_json: str):
     """Convert a CSV test specification to an Xray-compatible JSON file."""
@@ -33,10 +35,10 @@ def generate_tests_json(input_csv: str, project_key: str, output_json: str):
 
         folder = first.get('Repository Folder', '')
         if folder:
-            test['xray_test_repository_folder'] = folder
+            test['xray_test_repository_folder'] = folder.strip()
         sets = first.get('Test Sets', '')
         if sets:
-            test['xray_test_sets'] = {'key': first.get('Project Key', project_key)}
+            test['xray_test_sets'] = [s.strip() for s in re.split(r'[;,]', sets) if s.strip()]
 
         for _, row in group.iterrows():
             action = row.get('Step', '')
@@ -50,6 +52,8 @@ def generate_tests_json(input_csv: str, project_key: str, output_json: str):
             test['steps'].append(step)
 
         tests.append(test)
+
+    clean_json_data(tests)
 
     with open(output_json, 'w', encoding='utf-8') as f:
         json.dump(tests, f, ensure_ascii=False, indent=2)
