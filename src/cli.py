@@ -79,8 +79,11 @@ def csv_menu(cfg: config.Config) -> None:
         opt = input('Seleccione una opción: ').strip()
 
         if opt == '1':
-            new_sep = input('Nuevo separador (, o ;): ').strip()
-            cfg.csv_separator = ';' if new_sep == ';' else ','
+            new_sep = input('Nuevo separador (, ; o |): ').strip()
+            if new_sep in (',', ';', '|'):
+                cfg.csv_separator = new_sep
+            else:
+                print('Separador inválido. No se realizaron cambios.')
         elif opt == '2':
             csv_name = request_file_name(config.env_path())
             csv_path = os.path.join(config.env_path(), csv_name)
