@@ -22,7 +22,7 @@ def generate_tests_json(input_csv: str, project_key: str, output_json: str):
     for _, group in df.groupby('Test ID', sort=False):
         first = group.iloc[0]
         test = {
-            'testtype': first.get('Test Type', 'Manual'),
+            'testtype': (first.get('Test Type', 'Manual') or 'Manual').strip(),
             'fields': {
                 'project': {'key': first.get('Project Key', project_key)},
                 'summary': first['Summary'],
@@ -36,7 +36,7 @@ def generate_tests_json(input_csv: str, project_key: str, output_json: str):
             test['xray_test_repository_folder'] = folder
         sets = first.get('Test Sets', '')
         if sets:
-            test['xray_test_sets'] = [s.strip() for s in re.split(r'[;,]', sets) if s.strip()]
+            test['xray_test_sets'] = {'key': first.get('Project Key', project_key)}
 
         for _, row in group.iterrows():
             action = row.get('Step', '')
