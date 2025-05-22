@@ -61,3 +61,15 @@ def confirm_action(message: str) -> bool:
     """Ask the user to confirm an action."""
     resp = input(f"{message} (s/N): ").strip().lower()
     return resp in ('s', 'si', 'y', 'yes')
+
+
+def list_files(directory: str, extensions: tuple[str, ...]) -> list[str]:
+    """Return and display files with given *extensions* in *directory*."""
+    files = [f for f in os.listdir(directory) if f.lower().endswith(extensions)]
+    if files:
+        print('Archivos encontrados:')
+        for name in files:
+            print(f"- {name}")
+    else:
+        print('No se encontraron archivos.')
+    return files

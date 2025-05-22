@@ -2,21 +2,31 @@
 from __future__ import annotations
 import json
 import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
 
 class XrayClient:
     """Simple client to send test specifications to Xray."""
 
-    def __init__(self, token: str | None = None, endpoint_url: str | None = None):
+    def __init__(
+        self,
+        token: str | None = None,
+        endpoint_url: str | None = None,
+        *,
+        max_workers: int = 5,
+    ):
         self.token = token or self._obtain_token()
         self.endpoint_url = endpoint_url or os.getenv(
             'XRAY_IMPORT_URL',
             'https://xray.cloud.getxray.app/api/v1/import/test/bulk',
         )
+        self._session = requests.Session()
+        self._max_workers = max_workers
 
     @staticmethod
     def _obtain_token() -> str:
+        """Return an auth token, accepting JSON or plain text responses."""
         client_id = os.getenv('CLIENT_ID')
         client_secret = os.getenv('CLIENT_SECRET')
         auth_url = os.getenv('AUTH_URL')
@@ -27,8 +37,12 @@ class XrayClient:
         headers = {'Content-Type': 'application/json'}
         resp = requests.post(auth_url, headers=headers, json=payload)
         resp.raise_for_status()
-        data = resp.json()
-        return data['token'] if isinstance(data, dict) else resp.text
+        try:
+            data = resp.json()
+            token = data['token'] if isinstance(data, dict) else data
+        except ValueError:
+            token = resp.text
+        return token.strip()
 
     def send_json(self, json_path: str):
         """Send a JSON file to Xray."""
@@ -36,22 +50,40 @@ class XrayClient:
             raise FileNotFoundError(json_path)
         with open(json_path, 'r', encoding='utf-8') as f:
             json_data = json.load(f)
+        json_body = json.dumps(json_data, ensure_ascii=False).encode('utf-8')
         headers = {
             'Content-Type': 'application/json',
             'Authorization': f'Bearer {self.token}',
         }
-        resp = requests.post(self.endpoint_url, headers=headers, json=json_data)
+        resp = self._session.post(
+            self.endpoint_url,
+            headers=headers,
+            data=json_body,
+        )
         resp.raise_for_status()
         return resp
 
     def send_multiple(self, json_files: list[str]):
-        """Send multiple JSON files sequentially."""
+        """Send multiple JSON files using a thread pool."""
         successes: list[str] = []
         failures: list[tuple[str, str]] = []
-        for json_file in json_files:
-            try:
-                self.send_json(json_file)
-                successes.append(json_file)
-            except Exception as exc:  # pragma: no cover - runtime errors only
-                failures.append((json_file, str(exc)))
+
+        def _send(path: str) -> str:
+            self.send_json(path)
+            return path
+
+        with ThreadPoolExecutor(max_workers=self._max_workers) as exe:
+            future_to_file = {exe.submit(_send, f): f for f in json_files}
+            for fut in as_completed(future_to_file):
+                fpath = future_to_file[fut]
+                try:
+                    fut.result()
+                    successes.append(fpath)
+                except Exception as exc:  # pragma: no cover - runtime errors only
+                    failures.append((fpath, str(exc)))
+
         return successes, failures
+
+    def close(self) -> None:
+        """Close underlying HTTP session."""
+        self._session.close()
