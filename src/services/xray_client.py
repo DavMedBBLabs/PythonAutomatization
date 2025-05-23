@@ -21,6 +21,9 @@ class XrayClient:
             'XRAY_IMPORT_URL',
             'https://xray.cloud.getxray.app/api/v1/import/test/bulk',
         )
+        # Maintain a base session for sequential uploads. Individual threads
+        # will create their own sessions to avoid sharing a single instance
+        # across threads (``requests.Session`` is not thread-safe).
         self._session = requests.Session()
         self._max_workers = max_workers
 
@@ -44,7 +47,7 @@ class XrayClient:
             token = resp.text
         return token.strip()
 
-    def send_json(self, json_path: str):
+    def send_json(self, json_path: str, *, session: requests.Session | None = None):
         """Send a JSON file to Xray."""
         if not os.path.isfile(json_path):
             raise FileNotFoundError(json_path)
@@ -55,7 +58,8 @@ class XrayClient:
             'Content-Type': 'application/json',
             'Authorization': f'Bearer {self.token}',
         }
-        resp = self._session.post(
+        sess = session or self._session
+        resp = sess.post(
             self.endpoint_url,
             headers=headers,
             data=json_body,
@@ -69,7 +73,12 @@ class XrayClient:
         failures: list[tuple[str, str]] = []
 
         def _send(path: str) -> str:
-            self.send_json(path)
+            # Create a dedicated session per thread to avoid sharing the base
+            # session between threads. ``requests.Session`` instances are not
+            # guaranteed to be thread-safe and may cause issues when re-used
+            # concurrently.
+            with requests.Session() as sess:
+                self.send_json(path, session=sess)
             return path
 
         with ThreadPoolExecutor(max_workers=self._max_workers) as exe:
