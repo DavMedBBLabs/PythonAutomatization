@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 import requests
 
 
@@ -78,7 +78,7 @@ class XrayClient:
                     detail = str(data)
             except ValueError:
                 detail = resp.text.strip()
-            raise requests.HTTPError(f"{exc}: {detail}") from None
+            raise requests.HTTPError(f"{exc}: {detail}", response=resp) from None
         return resp
 
     def send_multiple(
@@ -86,42 +86,58 @@ class XrayClient:
         json_files: list[str],
         *,
         retries: int = 3,
-        backoff: float = 1.0,
+        delay: float = 5.0,
+        backoff: float = 2.0,
     ):
-        """Send multiple JSON files using a thread pool.
-
-        Each file will be retried up to ``retries`` times with a simple
-        exponential backoff in case of errors.
-        """
+        """Send multiple JSON files sequentially with retry logic."""
         successes: list[str] = []
         failures: list[tuple[str, str]] = []
 
-        def _send(path: str) -> str:
+        for path in json_files:
             attempt = 0
+            wait_time = 0.0
             while True:
+                if wait_time > 0:
+                    time.sleep(wait_time)
                 try:
-                    # Create a dedicated session per thread to avoid sharing
-                    # the base session between threads. ``requests.Session``
-                    # instances are not guaranteed to be thread-safe and may
-                    # cause issues when re-used concurrently.
-                    with requests.Session() as sess:
-                        self.send_json(path, session=sess)
-                    return path
+                    self.send_json(path)
+                    successes.append(path)
+                    break
+                except requests.HTTPError as exc:
+                    status = exc.response.status_code if exc.response else None
+                    message = str(exc)
+                    if (
+                        attempt < retries
+                        and status in (400, 429)
+                        and (
+                            "A job to import tests is already in progress" in message
+                            or status == 429
+                        )
+                    ):
+                        wait_time = delay
+                        if status == 429:
+                            try:
+                                data = exc.response.json()
+                                next_dt = data.get("nextValidRequestDate")
+                                if next_dt:
+                                    dt = datetime.fromisoformat(next_dt.replace("Z", "+00:00"))
+                                    wait_time = max(
+                                        (dt - datetime.now(timezone.utc)).total_seconds(),
+                                        wait_time,
+                                    )
+                            except Exception:
+                                pass
+                        attempt += 1
+                        delay *= backoff
+                        continue
+                    failures.append((path, message))
+                    break
                 except Exception as exc:  # pragma: no cover - runtime errors only
-                    attempt += 1
-                    if attempt > retries:
-                        raise exc
-                    time.sleep(backoff * attempt)
+                    failures.append((path, str(exc)))
+                    break
 
-        with ThreadPoolExecutor(max_workers=self._max_workers) as exe:
-            future_to_file = {exe.submit(_send, f): f for f in json_files}
-            for fut in as_completed(future_to_file):
-                fpath = future_to_file[fut]
-                try:
-                    fut.result()
-                    successes.append(fpath)
-                except Exception as exc:  # pragma: no cover - runtime errors only
-                    failures.append((fpath, str(exc)))
+            # small cooldown between files
+            time.sleep(1)
 
         return successes, failures
 
