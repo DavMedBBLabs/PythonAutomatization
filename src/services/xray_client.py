@@ -2,6 +2,7 @@
 from __future__ import annotations
 import json
 import os
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 
@@ -64,22 +65,53 @@ class XrayClient:
             headers=headers,
             data=json_body,
         )
-        resp.raise_for_status()
+        try:
+            resp.raise_for_status()
+        except requests.HTTPError as exc:
+            # Include server response body to help diagnose failures.
+            detail = ""
+            try:
+                data = resp.json()
+                if isinstance(data, dict):
+                    detail = data.get("error") or data.get("message") or str(data)
+                else:
+                    detail = str(data)
+            except ValueError:
+                detail = resp.text.strip()
+            raise requests.HTTPError(f"{exc}: {detail}") from None
         return resp
 
-    def send_multiple(self, json_files: list[str]):
-        """Send multiple JSON files using a thread pool."""
+    def send_multiple(
+        self,
+        json_files: list[str],
+        *,
+        retries: int = 3,
+        backoff: float = 1.0,
+    ):
+        """Send multiple JSON files using a thread pool.
+
+        Each file will be retried up to ``retries`` times with a simple
+        exponential backoff in case of errors.
+        """
         successes: list[str] = []
         failures: list[tuple[str, str]] = []
 
         def _send(path: str) -> str:
-            # Create a dedicated session per thread to avoid sharing the base
-            # session between threads. ``requests.Session`` instances are not
-            # guaranteed to be thread-safe and may cause issues when re-used
-            # concurrently.
-            with requests.Session() as sess:
-                self.send_json(path, session=sess)
-            return path
+            attempt = 0
+            while True:
+                try:
+                    # Create a dedicated session per thread to avoid sharing
+                    # the base session between threads. ``requests.Session``
+                    # instances are not guaranteed to be thread-safe and may
+                    # cause issues when re-used concurrently.
+                    with requests.Session() as sess:
+                        self.send_json(path, session=sess)
+                    return path
+                except Exception as exc:  # pragma: no cover - runtime errors only
+                    attempt += 1
+                    if attempt > retries:
+                        raise exc
+                    time.sleep(backoff * attempt)
 
         with ThreadPoolExecutor(max_workers=self._max_workers) as exe:
             future_to_file = {exe.submit(_send, f): f for f in json_files}
