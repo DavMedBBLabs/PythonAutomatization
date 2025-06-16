@@ -81,6 +81,30 @@ class XrayClient:
             raise requests.HTTPError(f"{exc}: {detail}", response=resp) from None
         return resp
 
+    def send_tests(self, tests: list[dict], *, session: requests.Session | None = None):
+        """Send a list of test objects directly to Xray."""
+        json_body = json.dumps(tests, ensure_ascii=False).encode("utf-8")
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {self.token}",
+        }
+        sess = session or self._session
+        resp = sess.post(self.endpoint_url, headers=headers, data=json_body)
+        try:
+            resp.raise_for_status()
+        except requests.HTTPError as exc:
+            detail = ""
+            try:
+                data = resp.json()
+                if isinstance(data, dict):
+                    detail = data.get("error") or data.get("message") or str(data)
+                else:
+                    detail = str(data)
+            except ValueError:
+                detail = resp.text.strip()
+            raise requests.HTTPError(f"{exc}: {detail}", response=resp) from None
+        return resp
+
     def send_multiple(
         self,
         json_files: list[str],
