@@ -26,13 +26,33 @@ def generate_tests_json(
     except Exception as exc:  # pragma: no cover - runtime errors only
         raise ValueError(f'No se pudo leer CSV {input_csv}: {exc}')
     df = df.dropna(how='all')
-    df.columns = df.columns.str.strip()
+    df.columns = df.columns.str.strip().str.title()
 
     required = {'Summary', 'Step'}
     if not required.issubset(df.columns):
-        raise ValueError(
-            'El CSV no contiene las columnas requeridas o el separador es incorrecto'
-        )
+        # Try to auto-detect separator if columns are missing
+        import csv as _csv
+
+        with open(csv_path, 'r', encoding='utf-8') as f:
+            sample = f.read(1024)
+        try:
+            dialect = _csv.Sniffer().sniff(sample, [',', ';', '|'])
+            if dialect.delimiter != sep:
+                df = pd.read_csv(
+                    csv_path,
+                    dtype=str,
+                    encoding='utf-8',
+                    sep=dialect.delimiter,
+                    skipinitialspace=True,
+                ).fillna('')
+                df = df.dropna(how='all')
+                df.columns = df.columns.str.strip().str.title()
+        except _csv.Error:
+            pass
+        if not required.issubset(df.columns):
+            raise ValueError(
+                'El CSV no contiene las columnas requeridas o el separador es incorrecto'
+            )
 
     if 'Test ID' not in df.columns:
         df['Test ID'] = df.groupby('Summary').ngroup()

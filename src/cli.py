@@ -16,6 +16,8 @@ from .services import (
     excels_to_csvs,
     excel_to_csv,
     XrayClient,
+    tests_from_excel,
+    send_excel_to_xray,
     clean_json_file,
     clean_json_directory,
 )
@@ -44,6 +46,7 @@ def excel_menu(cfg: config.Config) -> None:
         print('1. Convertir Excel a CSV')
         print('2. Convertir Excel a CSV en lote')
         print('3. Listar archivos Excel')
+        print('4. Enviar Excel a Xray')
         print('0. Volver')
         opt = input('Seleccione una opción: ').strip()
 
@@ -61,6 +64,18 @@ def excel_menu(cfg: config.Config) -> None:
                 print(f"Falló {os.path.basename(fpath)}: {reason}")
         elif opt == '3':
             list_files(config.excel_path(), ('.xlsx', '.xls'))
+        elif opt == '4':
+            excel_file = request_excel_file(config.excel_path())
+            client = XrayClient(cfg.token, cfg.endpoint_url)
+            try:
+                successes, failures = send_excel_to_xray(excel_file, cfg.project_key, client)
+                print(
+                    f'Envío completado. Éxitos: {len(successes)} - Fallos: {len(failures)}'
+                )
+                for idx, reason in failures:
+                    print(f"Falló test {idx}: {reason}")
+            finally:
+                client.close()
         elif opt == '0':
             break
         else:
